@@ -7,8 +7,7 @@ def linear(feature, p0, p1, d, axis=0):
     f0 = feature[..., p0[0], p0[1]]
     f1 = feature[..., p1[0], p1[1]]
     weight = abs(d[axis])
-    f = (1 - weight) * f0 + weight * f1
-    return f
+    return (1 - weight) * f0 + weight * f1
 
 def bilinear(feature, qi, d):
     y0, x0 = qi
@@ -21,8 +20,7 @@ def bilinear(feature, qi, d):
     fx1 = linear(feature, (x0, y0), (x1, y0), d, axis=0)
     fx2 = linear(feature, (x0, y1), (x1, y1), d, axis=0)
     weight = abs(d[1])
-    fx = (1 - weight) * fx1 + weight * fx2
-    return fx
+    return (1 - weight) * fx1 + weight * fx2
 
 def motion_supervision(F0, F, pi, ti, r1=3, M=None):
     F = functional.interpolate(F, [256, 256], mode="bilinear")
@@ -54,9 +52,7 @@ def motion_supervision(F0, F, pi, ti, r1=3, M=None):
         align_corners=True,
     )
 
-    loss = (sample_d - sample.detach()).abs().mean(1).sum()
-
-    return loss
+    return (sample_d - sample.detach()).abs().mean(1).sum()
 
 @torch.no_grad()
 def point_tracking(F0, F, pi, p0, r2=12):
@@ -69,8 +65,7 @@ def point_tracking(F0, F, pi, p0, r2=12):
     idx = diff.argmin()
     dy = int(idx / (x[1] - x[0]))
     dx = int(idx % (x[1] - x[0]))
-    npi = (x[0] + dx, y[0] + dy)
-    return npi
+    return x[0] + dx, y[0] + dy
 
 def requires_grad(model, flag=True):
     for p in model.parameters():
@@ -138,9 +133,10 @@ class DragGAN():
             return_features=True, randomize_noise=False,
         )
         features = features[self.layer_index*2+1]
-        loss = 0
-        for i in range(len(self.p0)):
-            loss += motion_supervision(self.F0, features, points[2*i], points[2*i+1])
+        loss = sum(
+            motion_supervision(self.F0, features, points[2 * i], points[2 * i + 1])
+            for i in range(len(self.p0))
+        )
         print(loss)
         loss.backward()
         self.optimizer.step()
