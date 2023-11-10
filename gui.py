@@ -72,8 +72,7 @@ with dpg.window(
     dpg.add_text('weight', pos=(5, 40))
 
     def select_cb(sender, app_data):
-        selections = app_data['selections']
-        if selections:
+        if selections := app_data['selections']:
             for fn in selections:
                 model.load_ckpt(selections[fn])
                 break
